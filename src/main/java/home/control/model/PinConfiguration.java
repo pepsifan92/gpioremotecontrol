@@ -47,11 +47,11 @@ public class PinConfiguration{
     public PinConfiguration(Event event, int number, int pwmValue) {
         this.event = event;
         this.number = number;
-        this.pwmValue = pwmValue;
+        setPwmValue(pwmValue);
     }
 
     /**
-     *
+     * Used for FADE and FADE_UP_DOWN Event
      * @param event Event to run
      * @param number the number of the Pi
      * @param cycleDuration How long should a cycle (one repeating) last
@@ -72,6 +72,26 @@ public class PinConfiguration{
         this.cyclePause = cyclePause;
     }
 
+    /**
+     * Used for BLINK Event
+     * @param event Event to run
+     * @param number the number of the Pi
+     * @param uptime How long state should be up (up is the value of the given pwmValue) 
+     * @param downtime How long should last the down-state. PWM = 0.
+     * @param pwmValue Value of the PWM for uptime
+     * @param repeat defines if the effect should run only once or more times
+     * @param cycles the amount of repeatings
+     */
+    public PinConfiguration(Event event, int number, int uptime, int downtime, int pwmValue, boolean repeat, int cycles) {
+        this.event = event;
+        this.number = number;
+        this.uptime = uptime;
+        this.downtime = downtime;
+        setPwmValue(pwmValue);
+        this.repeat = repeat;
+        this.cycles = cycles;
+    }
+    
     public Event getEvent() {
         return event;
     }
@@ -108,7 +128,12 @@ public class PinConfiguration{
         return pwmValue;
     }
 
-    public void setPwmValue(int pwmValue) {
+    public void setPwmValue(int pwmValue) {    	
+    	if (pwmValue > 100) {
+			pwmValue = 100;
+		} else if (pwmValue < 0) {
+			pwmValue = 0;
+		}
         this.pwmValue = pwmValue;
     }
 
@@ -149,6 +174,11 @@ public class PinConfiguration{
     }
 
     public void setStartVal(int startVal) {
+    	if (startVal > 100) {
+    		startVal = 100;
+		} else if (startVal < 0) {
+    		startVal = 0;
+		}
         this.startVal = startVal;
     }
 
@@ -157,6 +187,11 @@ public class PinConfiguration{
     }
 
     public void setEndVal(int endVal) {
+    	if (endVal > 100) {
+    		endVal = 100;
+		} else if (endVal < 0) {
+    		endVal = 0;
+		}
         this.endVal = endVal;
     }
 

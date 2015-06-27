@@ -13,16 +13,13 @@ import home.control.model.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
-import java.util.TreeMap;
-
 import org.java_websocket.WebSocket;
-import org.java_websocket.client.WebSocketClient;
 import com.google.gson.Gson;
-
 import org.openhab.binding.gpioremotecontrol.GpioRemoteControlBindingProvider;
 
 import org.apache.commons.lang.StringUtils;
 import org.openhab.core.binding.AbstractActiveBinding;
+import org.openhab.core.library.types.IncreaseDecreaseType;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.State;
@@ -62,22 +59,6 @@ public class GpioRemoteControlBinding extends AbstractActiveBinding<GpioRemoteCo
 	public GpioRemoteControlBinding() {
 		logger.debug("GpioRemoteControlBinding binding started");
 	}
-			
-	
-	/* ADDED THIS FOR GETTING ALL COMMANDS... ****************************/
-	/**
-	 * @{inheritDoc}
-	 */
-	@Override
-	public void receiveCommand(String itemName, Command command) {
-		// does any provider contain a binding config?
-		if (!providesBindingFor(itemName)) {
-			return;
-		}
-		internalReceiveCommand(itemName, command);
-	}
-	/* ADDED THIS FOR GETTING ALL COMMANDS... ****************************/
-	
 	
 	/**
 	 * Called by the SCR to activate the component with its configuration read from CAS
@@ -86,11 +67,7 @@ public class GpioRemoteControlBinding extends AbstractActiveBinding<GpioRemoteCo
 	 * @param configuration Configuration properties for this component obtained from the ConfigAdmin service
 	 */
 	public void activate(final BundleContext bundleContext, final Map<String, Object> configuration) {
-		this.bundleContext = bundleContext;
-
-		// the configuration is guaranteed not to be null, because the component definition has the
-		// configuration-policy set to require. If set to 'optional' then the configuration may be null
-		
+		this.bundleContext = bundleContext;		
 			
 		// to override the default refresh interval one has to add a 
 		// parameter to openhab.cfg like <bindingName>:refresh=<intervalInMs>
@@ -98,8 +75,6 @@ public class GpioRemoteControlBinding extends AbstractActiveBinding<GpioRemoteCo
 		if (StringUtils.isNotBlank(refreshIntervalString)) {
 			refreshInterval = Long.parseLong(refreshIntervalString);
 		}
-
-		// read further config parameters here ...
 		
 		setProperlyConfigured(true);
 	}
@@ -155,8 +130,6 @@ public class GpioRemoteControlBinding extends AbstractActiveBinding<GpioRemoteCo
 	@Override
 	protected void execute() {
 		// the frequently executed code (polling) goes here ...
-		logger.debug("execute() method is called!");	
-		logger.debug("execute() method: " + providers.iterator().next().getClientMap().keySet().toString());
 		removeUnusedConnections();
 		checkConnections();
 	}
@@ -188,7 +161,7 @@ public class GpioRemoteControlBinding extends AbstractActiveBinding<GpioRemoteCo
 					for(String itemName : provider.getItemNames()){						
 						URI uri = new URI("ws://" + provider.getConfig(itemName).getHostWithPort());
 						if(uri.equals(keyUri)){
-							continue keyLoop;												
+							continue keyLoop;
 						}						
 						provider.getClientMap().get(keyUri).close(); //Close unused connection	
 						provider.getClientMap().remove(keyUri); //If non Item uses the URI, remove the connection				
@@ -218,27 +191,89 @@ public class GpioRemoteControlBinding extends AbstractActiveBinding<GpioRemoteCo
 		for (GpioRemoteControlBindingProvider provider : providers) {
 			try {
 				int pinNumber = provider.getConfig(itemName).getNumber();
-				PinConfiguration pinConf;
+				PinConfiguration pinConf = null;
 				
-				if(command == OnOffType.ON){
-					pinConf = new PinConfiguration(Event.FADE, pinNumber, 400, 0, 100, false, 1, 0);
-					//pinConf = new PinConfiguration(Event.SET, pinNumber, true);
-				} else {
-					pinConf = new PinConfiguration(Event.FADE, pinNumber, 600, 100, 0, false, 1, 0);
-					//pinConf = new PinConfiguration(Event.SET, pinNumber, false);
-				}
-				if(itemName.equals("NT")){
-					if(command == OnOffType.ON){
-						pinConf = new PinConfiguration(Event.SET, pinNumber, true);
+				if(command == OnOffType.ON || command.equals("ON")){
+					pinConf = new PinConfiguration(Event.SET, pinNumber, true);
+					provider.getConfig(itemName).setPwmValue(100);
+					
+				} else if (command == OnOffType.OFF || command.equals("OFF")){
+					pinConf = new PinConfiguration(Event.SET, pinNumber, false);
+					provider.getConfig(itemName).setPwmValue(0);
+					
+				} else if (command == IncreaseDecreaseType.INCREASE || command.equals("INCREASE")){
+					//provider.getConfig(itemName).setPwmValue(provider.getConfig(itemName).getPwmValue()+1);
+					logger.debug("INCREASE: command: {} , pwmVal {}", command, provider.getConfig(itemName).getPwmValue());
+					pinConf = new PinConfiguration(Event.DIM, pinNumber, provider.getConfig(itemName).getPwmValue()+1);
+					provider.getConfig(itemName).setPwmValue(provider.getConfig(itemName).getPwmValue()+1);
+				} else if (command == IncreaseDecreaseType.DECREASE || command.equals("DECREASE")){
+					logger.debug("DECREASE: command: {} , pwmVal {}", command, provider.getConfig(itemName).getPwmValue());
+					//provider.getConfig(itemName).setPwmValue(provider.getConfig(itemName).getPwmValue()-1);
+					pinConf = new PinConfiguration(Event.DIM, pinNumber, provider.getConfig(itemName).getPwmValue());
+					provider.getConfig(itemName).setPwmValue(provider.getConfig(itemName).getPwmValue()-1);				
+				} else if (command.toString().contains("dim_")){
+					String[] split = command.toString().split("_");
+					//Should be: 0:dim;1:pwmValue
+					pinConf = new PinConfiguration(Event.DIM, pinNumber, Integer.parseInt(split[1])); 
+					provider.getConfig(itemName).setPwmValue(Integer.parseInt(split[1])); //Save value of PWM
+					
+				} else if (command.toString().toLowerCase().contains("fade_")){
+					String[] split = command.toString().split("_");
+					//Should be: 0:fade;1:cycleDuration;2:startVal;3:endVal;4:repeat;5:cycles;6:cyclePause
+					if(split.length == 4) { //Short version: If only cycleDuration and start- and EndValue given 
+						pinConf = new PinConfiguration(Event.FADE, pinNumber, 
+							Integer.parseInt(split[1]), Integer.parseInt(split[2]), Integer.parseInt(split[3]), false, 0, 0); //default values for no loop
 					} else {
-						pinConf = new PinConfiguration(Event.SET, pinNumber, false);
+						pinConf = new PinConfiguration(Event.FADE, pinNumber, 
+							Integer.parseInt(split[1]), Integer.parseInt(split[2]), Integer.parseInt(split[3]), 
+							Boolean.parseBoolean(split[4]), Integer.parseInt(split[5]), Integer.parseInt(split[6]));
 					}
+					provider.getConfig(itemName).setPwmValue(Integer.parseInt(split[3])); //Save endVal of PWM
+					logger.debug("FADE: command: {} , pwmVal {}", command, provider.getConfig(itemName).getPwmValue());
+					
+				} else if (command.toString().toLowerCase().contains("fadeUpDown_") || command.toString().contains("fadeupdown_")){
+					String[] split = command.toString().split("_");
+					//Should be: 0:fadeUpDown;1:cycleDuration;2:startVal;3:endVal;4:repeat;5:cycles;6:cyclePause
+					if(split.length == 4) { //Short version: If only cycleDuration and start- and EndValue given 
+						pinConf = new PinConfiguration(Event.FADE_UP_DOWN, pinNumber, 
+							Integer.parseInt(split[1]), Integer.parseInt(split[2]), Integer.parseInt(split[3]), false, 0, 0); //default values for no loop						
+					} else {
+						pinConf = new PinConfiguration(Event.FADE_UP_DOWN, pinNumber, 
+							Integer.parseInt(split[1]), Integer.parseInt(split[2]), Integer.parseInt(split[3]), 
+							Boolean.parseBoolean(split[4]), Integer.parseInt(split[5]), Integer.parseInt(split[6]));
+					}
+					provider.getConfig(itemName).setPwmValue(Integer.parseInt(split[3])); //Save endVal of PWM
+				
+				} else if (command.toString().toLowerCase().contains("blink_")){
+					String[] split = command.toString().split("_");
+					//Should be: 0:blink;1:uptime;2:downtime;3:pwmValue;4:repeat;5:cycles
+					
+					if(split.length == 2) { //Short version: Only uptime - one flash to 100%.
+						pinConf = new PinConfiguration(Event.BLINK, pinNumber, Integer.parseInt(split[1]), 1, 100, false, 0); //default values for no loop						
+					} else {
+						pinConf = new PinConfiguration(Event.BLINK, pinNumber, Integer.parseInt(split[1]), Integer.parseInt(split[2]), 
+								Integer.parseInt(split[3]), Boolean.parseBoolean(split[4]), Integer.parseInt(split[5]));						
+					}
+					provider.getConfig(itemName).setPwmValue(0); //Save endVal of PWM
+					
+				} else {
+					try {
+						//If parseable as Integer
+						int tempPwmVal = Integer.parseUnsignedInt(command.toString());
+						provider.getConfig(itemName).setPwmValue(tempPwmVal); //ensures the value is 0-100
+						pinConf = new PinConfiguration(Event.DIM, pinNumber, provider.getConfig(itemName).getPwmValue());
+					} catch (NumberFormatException e) {
+						//Integer parsing failed
+					} catch (Exception e) {}
+					
 				}
 								
 				URI uriOfPin = new URI("ws://" + provider.getConfig(itemName).getHostWithPort());
 				
 				provider.getClientMap().get(uriOfPin).send(gson.toJson(pinConf)); //Send Command to Remote GPIO Pin
-				
+			} catch (IndexOutOfBoundsException e) {
+				logger.warn("GpioRemoteControl: internalReceiveCommand: EventConfig not readable! Maybe wrong parameter in Sitemap? " +
+						"ItemName: {}, Command: {}", itemName, command);
 			} catch (URISyntaxException e) {
 				e.printStackTrace();
 			} catch (Exception e) {

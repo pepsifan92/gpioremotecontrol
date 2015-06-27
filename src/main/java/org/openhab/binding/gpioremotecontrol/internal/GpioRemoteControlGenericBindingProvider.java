@@ -14,12 +14,12 @@ import java.util.TreeMap;
 
 import home.control.model.HostAndPinConfiguration;
 
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
 import org.openhab.binding.gpioremotecontrol.GpioRemoteControlBindingProvider;
 import org.openhab.core.items.Item;
 import org.openhab.core.library.items.DimmerItem;
+import org.openhab.core.library.items.StringItem;
 import org.openhab.core.library.items.SwitchItem;
+import org.openhab.core.library.types.PercentType;
 import org.openhab.model.item.binding.AbstractGenericBindingProvider;
 import org.openhab.model.item.binding.BindingConfigParseException;
 import org.slf4j.Logger;
@@ -52,10 +52,10 @@ public class GpioRemoteControlGenericBindingProvider extends AbstractGenericBind
 	 */
 	@Override
 	public void validateItemType(Item item, String bindingConfig) throws BindingConfigParseException {
-		if (!(item instanceof SwitchItem || item instanceof DimmerItem)) {
+		if (!(item instanceof SwitchItem || item instanceof DimmerItem || item instanceof StringItem || item instanceof PercentType)) {
 			throw new BindingConfigParseException("item '" + item.getName()
 					+ "' is of type '" + item.getClass().getSimpleName()
-					+ "', only Switch- and DimmerItems are allowed - please check your *.items configuration");
+					+ "', only Switch- String- (for JSON PinConfig) Percent- and DimmerItems are allowed - please check your *.items configuration");
 		}
 	}
 	

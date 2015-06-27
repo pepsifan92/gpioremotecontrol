@@ -1,0 +1,10 @@
+Items:
+  String decke_LEDNord_string (Deckenlicht) { gpioremotecontrol="123.123.123.31:1234;105"}
+  Switch decke_LEDNord_switch (Deckenlicht) { gpioremotecontrol="123.123.123.31:1234;105"}
+  Dimmer decke_LEDNord_dimmer (Deckenlicht) { gpioremotecontrol="123.123.123.31:1234;105"}
+
+Sitemap:
+  Switch item=decke_LEDNord_string mappings=[fade="OFF", boa-boom="ON", fade_...="Fade"]
+  Switch item=decke_LEDNord_switch 
+  Slider item=decke_LEDNord_dimmer sendFrequency=50 mappings=[0="OFF", 100="ON", 60="Fade"]
+  Switch item=decke_LEDNord_dimmer mappings=[0="OFF", 100="ON", 60="Fade"]
