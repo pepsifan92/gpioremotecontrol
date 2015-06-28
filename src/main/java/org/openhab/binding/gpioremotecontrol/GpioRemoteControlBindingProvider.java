@@ -21,7 +21,7 @@ import home.control.model.*;
  */
 public interface GpioRemoteControlBindingProvider extends BindingProvider {
 	
-	public HostAndPinConfiguration getConfig(String itemName);
+	public HostAndTempAndPinConfiguration getConfig(String itemName);
 	public TreeMap<URI, Client> getClientMap();
 	
 }

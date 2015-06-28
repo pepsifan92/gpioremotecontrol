@@ -4,7 +4,7 @@ public class PinConfiguration{
 
     private Event event;
     private int number = -1;
-    private String name;
+	private String name;
     private int debounce;
     private int pwmValue;
     private boolean outputHigh;
@@ -16,6 +16,7 @@ public class PinConfiguration{
     private boolean repeat;
     private int cycles;
     private long cyclePause;
+    
 
     public PinConfiguration() {
         //System.out.println("Default Constructor");

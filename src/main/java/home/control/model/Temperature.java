@@ -1,13 +1,18 @@
 package home.control.model;
 
-public class Temperature {
+import org.openhab.core.binding.BindingConfig;
+
+public class Temperature implements BindingConfig {
 
     private final Event event = Event.TEMP;
-    private String deviceId;
+    private String deviceId = "";
     private String name;
     private long timeStamp;
     private int temperature;
 
+    public Temperature() {     
+    }
+    
     public Temperature(String deviceId) {
         this.deviceId = deviceId;
     }

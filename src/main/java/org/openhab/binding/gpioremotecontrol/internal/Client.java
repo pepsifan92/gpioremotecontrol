@@ -9,10 +9,12 @@ import org.java_websocket.handshake.ServerHandshake;
 
 public class Client extends WebSocketClient {
 
-    public Client(URI serverURI) {
+	GpioRemoteControlBinding gpioRemoteControlBinding;
+	
+    public Client(URI serverURI, GpioRemoteControlBinding gpioRemoteControlBinding) {
         super(serverURI);
+        this.gpioRemoteControlBinding = gpioRemoteControlBinding;
     }
-
     
     @Override
     public void onOpen(ServerHandshake handshakedata) {
@@ -26,7 +28,8 @@ public class Client extends WebSocketClient {
 
     @Override
     public void onMessage(String message) {
-        System.out.println("received message: " + message);
+        System.out.println("received message: " + message);  
+        gpioRemoteControlBinding.receiveServerMessage(message);
     }
 
     @Override
