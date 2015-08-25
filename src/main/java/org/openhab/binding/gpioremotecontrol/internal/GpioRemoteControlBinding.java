@@ -199,7 +199,8 @@ public class GpioRemoteControlBinding extends AbstractActiveBinding<GpioRemoteCo
 			try {
 				int pinNumber = provider.getConfig(itemName).pinConfiguration.getNumber();
 				PinConfiguration pinConf = null;
-				
+				logger.debug("GpioRemoteControl: internalReceiveCommand: Event Auswahl folgt... " +
+						"ItemName: {}, Command: {}", itemName, command);
 				if(command == OnOffType.ON || command.toString().toLowerCase().equals("on")){
 					pinConf = new PinConfiguration(Event.SET, pinNumber, true);
 					provider.getConfig(itemName).pinConfiguration.setPwmValue(100);
@@ -228,9 +229,9 @@ public class GpioRemoteControlBinding extends AbstractActiveBinding<GpioRemoteCo
 				} else if (command.toString().toLowerCase().contains("fade_")){
 					pinConf = handleEvent(provider, itemName, pinNumber, command, Event.FADE);
 					
-				} else if (command.toString().toLowerCase().contains("fadeUpDown_")){
+				} else if (command.toString().toLowerCase().contains("fadeupdown_")){
 					pinConf = handleEvent(provider, itemName, pinNumber, command, Event.FADE_UP_DOWN);
-									
+					
 				} else if (command.toString().toLowerCase().contains("blink_")){
 					pinConf = handleBlinkEvent(provider, itemName, pinNumber, command);	
 					
@@ -301,11 +302,11 @@ public class GpioRemoteControlBinding extends AbstractActiveBinding<GpioRemoteCo
 		// the code being executed when a state was sent on the openHAB
 		// event bus goes here. This method is only called if one of the 
 		// BindingProviders provide a binding for the given 'itemName'.
-		logger.debug("internalReceiveUpdate({},{}) is called!", itemName, newState);
+//		logger.debug("internalReceiveUpdate({},{}) is called!", itemName, newState);
 	}	
 	
 	public void receiveServerMessage(String message){
-		logger.debug(">>>>> GpioRemoteControl: receiveServerMessage!");
+//		logger.debug(">>>>> GpioRemoteControl: receiveServerMessage!");
 		try {
 			parseAndUpdatePinInput(message); // NOT TESTED YET, NO INPUT PIN AVAILABLE //	
 		} catch (Exception e) {
@@ -336,15 +337,15 @@ public class GpioRemoteControlBinding extends AbstractActiveBinding<GpioRemoteCo
 	}
 	
 	private void parseAndUpdateTemperature(String message) {
-		logger.debug("GpioRemoteControl: parseAndUpdateTemperature.");
+//		logger.debug("GpioRemoteControl: parseAndUpdateTemperature.");
 		Temperature tempConfig = gson.fromJson(message, Temperature.class);
 		if (tempConfig.getDeviceId() != "") { //Was successfully parsed		
-			logger.debug("GpioRemoteControl: receiveServerMessage: TemperatureConfig: {}, {}, {}", tempConfig.getDeviceId(), tempConfig.getTemperature(), getItemNameByTemperatureDeviceId(tempConfig.getDeviceId()));
+//			logger.debug("GpioRemoteControl: receiveServerMessage: TemperatureConfig: {}, {}, {}", tempConfig.getDeviceId(), tempConfig.getTemperature(), getItemNameByTemperatureDeviceId(tempConfig.getDeviceId()));
 			if (providers.iterator().next().getConfig(getItemNameByTemperatureDeviceId(tempConfig.getDeviceId())).configMode == ConfigMode.TEMPERATURE) {				
 				providers.iterator().next().getConfig(getItemNameByTemperatureDeviceId(tempConfig.getDeviceId())).temperature = tempConfig;
 				Float temperatureRaw = (float) (tempConfig.getTemperature());
 				Float temperature = temperatureRaw/1000; //Received value is like 22500 for 22,5°C 
-				logger.debug("GpioRemoteControl: parseAndUpdateTemperature: {}", temperature.toString());
+//				logger.debug("GpioRemoteControl: parseAndUpdateTemperature: {}", temperature.toString());
 				eventPublisher.postUpdate(getItemNameByTemperatureDeviceId(tempConfig.getDeviceId()), DecimalType.valueOf(temperature.toString()));				
 			}
 		}
